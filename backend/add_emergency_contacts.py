@@ -1,14 +1,10 @@
-"""
-Migration stub: add emergency_contacts table.
-
-This file exists so that backend/tests/conftest.py can extract the
-CREATE TABLE DDL via _ddl_from_script() without requiring a running
-database. The actual idempotent migration is in
-migrations/004_emergency_contacts.sql (applied by migrate.py).
-
-To apply to an existing database:
-    python migrate.py
-"""
+# add_emergency_contacts.py
+# Migration stub: add emergency_contacts table.
+#
+# This file exists so that backend/tests/conftest.py can extract the
+# CREATE TABLE DDL via _ddl_from_script() for the embedded test PostgreSQL.
+# The idempotent migration for existing databases is:
+#     backend/migrations/004_emergency_contacts.sql  (applied by migrate.py)
 
 DDL = """
 CREATE TABLE IF NOT EXISTS emergency_contacts (
