@@ -19,6 +19,8 @@ def create_tables():
         print("To destructively reset all tables and lose existing data, pass the --destructive-reset flag.")
     # 1. Drop existing tables safely to rebuild the clean architecture
     drop_commands = (
+        "DROP TABLE IF EXISTS emergency_contacts CASCADE;",
+        "DROP TABLE IF EXISTS user_blocks CASCADE;",
         "DROP TABLE IF EXISTS messages CASCADE;",
         "DROP TABLE IF EXISTS reports CASCADE;",
         "DROP TABLE IF EXISTS trust_score_history CASCADE;",
@@ -223,6 +225,24 @@ def create_tables():
             is_active BOOLEAN DEFAULT TRUE,
             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS emergency_contacts (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+            name VARCHAR(100) NOT NULL,
+            phone VARCHAR(20) NOT NULL,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS user_blocks (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            blocker_id UUID REFERENCES users(id) ON DELETE CASCADE,
+            blocked_id UUID REFERENCES users(id) ON DELETE CASCADE,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(blocker_id, blocked_id)
         );
         """
     )
