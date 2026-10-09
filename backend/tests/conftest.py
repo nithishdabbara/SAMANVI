@@ -52,9 +52,6 @@ def pg():
         cur.execute(open(os.path.join(BACKEND, "migrations", fname), encoding="utf-8").read())
     # NOTE: migrate_problem_offers.py is skipped on purpose: it declares problem_id INTEGER referencing a UUID
     # key, so it cannot run (audit Phase 5 item: needs a proper numbered migration).
-    for script in ("add_emergency_contacts.py",):
-        for ddl in _ddl_from_script(script):
-            cur.execute(ddl)
     import migrate  # the new numbered-migration runner
     conn.autocommit = False
     migrate.apply_migrations(conn, verbose=False)
@@ -69,7 +66,7 @@ def appmod(pg):
     os.environ.update({
         "DATABASE_URL": pg, "DB_SSLMODE": "disable", "JWT_SECRET_KEY": TEST_JWT_SECRET,
         "MESSAGE_ENCRYPTION_KEY": TEST_FERNET, "APP_ENV": "production", "ENABLE_LIVE_SMS": "false",
-        "ALLOW_DEV_OTP": "false",
+        "ALLOW_DEV_OTP": "false", "ALLOW_INSECURE_DB": "true",
     })
     for k in ("SANDBOX_API_KEY", "SANDBOX_SECRET", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN"):
         os.environ.pop(k, None)

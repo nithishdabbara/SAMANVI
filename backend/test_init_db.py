@@ -22,7 +22,7 @@ class TestInitDB(unittest.TestCase):
 
     @patch('init_db.psycopg2.connect')
     @patch('init_db.os.getenv')
-    @patch('apply_rebuild_migration.run_migration')
+    @patch('init_db.migrate.apply_migrations')
     @patch('sys.argv', ['init_db.py'])
     def test_safe_initialization_no_drops(self, mock_migration, mock_getenv, mock_connect):
         mock_getenv.return_value = 'fake_url'
@@ -51,7 +51,7 @@ class TestInitDB(unittest.TestCase):
 
     @patch('init_db.psycopg2.connect')
     @patch('init_db.os.getenv')
-    @patch('apply_rebuild_migration.run_migration')
+    @patch('init_db.migrate.apply_migrations')
     @patch('sys.argv', ['init_db.py', '--destructive-reset'])
     def test_destructive_reset_executes_drops(self, mock_migration, mock_getenv, mock_connect):
         mock_getenv.return_value = 'fake_url'
@@ -75,7 +75,7 @@ class TestInitDB(unittest.TestCase):
 
     @patch('init_db.psycopg2.connect')
     @patch('init_db.os.getenv')
-    @patch('apply_rebuild_migration.run_migration')
+    @patch('init_db.migrate.apply_migrations')
     @patch('sys.argv', ['init_db.py'])
     def test_migration_failure_propagates(self, mock_migration, mock_getenv, mock_connect):
         mock_getenv.return_value = 'fake_url'
@@ -95,7 +95,7 @@ class TestInitDB(unittest.TestCase):
 
     @patch('init_db.psycopg2.connect')
     @patch('init_db.os.getenv')
-    @patch('apply_rebuild_migration.run_migration')
+    @patch('init_db.migrate.apply_migrations')
     @patch('sys.argv', ['init_db.py'])
     def test_resolved_at_verification_failure(self, mock_migration, mock_getenv, mock_connect):
         mock_getenv.return_value = 'fake_url'

@@ -2,6 +2,7 @@ import os
 import sys
 import psycopg2
 from dotenv import load_dotenv
+import migrate
 
 load_dotenv()
 
@@ -19,8 +20,6 @@ def create_tables():
         print("To destructively reset all tables and lose existing data, pass the --destructive-reset flag.")
     # 1. Drop existing tables safely to rebuild the clean architecture
     drop_commands = (
-        "DROP TABLE IF EXISTS emergency_contacts CASCADE;",
-        "DROP TABLE IF EXISTS user_blocks CASCADE;",
         "DROP TABLE IF EXISTS messages CASCADE;",
         "DROP TABLE IF EXISTS reports CASCADE;",
         "DROP TABLE IF EXISTS trust_score_history CASCADE;",
@@ -34,6 +33,8 @@ def create_tables():
         "DROP TABLE IF EXISTS problem_photos CASCADE;",
         "DROP TABLE IF EXISTS problems CASCADE;",
         "DROP TABLE IF EXISTS categories CASCADE;",
+        "DROP TABLE IF EXISTS emergency_contacts CASCADE;",
+        "DROP TABLE IF EXISTS user_blocks CASCADE;",
         "DROP TABLE IF EXISTS users CASCADE;",
         "DROP TABLE IF EXISTS localities CASCADE;"
     )
@@ -229,20 +230,19 @@ def create_tables():
         """,
         """
         CREATE TABLE IF NOT EXISTS emergency_contacts (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+            id SERIAL PRIMARY KEY,
+            user_id UUID REFERENCES users(id) ON DELETE CASCADE,
             name VARCHAR(100) NOT NULL,
             phone VARCHAR(20) NOT NULL,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         """,
         """
         CREATE TABLE IF NOT EXISTS user_blocks (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             blocker_id UUID REFERENCES users(id) ON DELETE CASCADE,
             blocked_id UUID REFERENCES users(id) ON DELETE CASCADE,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(blocker_id, blocked_id)
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (blocker_id, blocked_id)
         );
         """
     )
@@ -270,9 +270,9 @@ def create_tables():
         conn.commit()
         print("Successfully deployed 100% optimized project schema!")
         
-        # Apply rebuild migrations
-        from apply_rebuild_migration import run_migration
-        run_migration()
+        # Apply numbered migrations
+        import migrate
+        migrate.apply_migrations(conn, verbose=False)
         
         # Verify schema post-migration
         cur = conn.cursor()

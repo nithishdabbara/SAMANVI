@@ -1,12 +1,14 @@
--- 004_emergency_contacts.sql
--- Idempotent migration: add emergency_contacts table for SOS feature.
-
 CREATE TABLE IF NOT EXISTS emergency_contacts (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+    id SERIAL PRIMARY KEY,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
     phone VARCHAR(20) NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_emergency_contacts_user_id ON emergency_contacts(user_id);
+CREATE TABLE IF NOT EXISTS user_blocks (
+    blocker_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    blocked_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (blocker_id, blocked_id)
+);
