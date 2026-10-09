@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+static/uploads/
+*.exe
+*.pem
+*.key
+*.p12
+*.jks
+google-services.json
+GoogleService-Info.plist

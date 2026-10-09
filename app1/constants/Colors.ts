@@ -1,0 +1,23 @@
+export const Colors = {
+  primary: '#0A84FF',
+  primaryDark: '#004080',
+  primaryLight: '#E6F2FF',
+  secondary: '#5E5CE6',
+  accentGold: '#40A9FF',
+  background: '#FAFAFA',
+  surface: '#FFFFFF',
+  surfaceSecondary: '#F1F5F9',
+  textPrimary: '#0F172A',
+  textSecondary: '#64748B',
+  border: '#E2E8F0',
+  error: '#FF3B30',
+  success: '#34C759',
+  warning: '#FF9500',
+  // Semantic UI tokens
+  separator: '#E2E8F0',
+  label: '#0F172A',
+  secondaryLabel: '#64748B',
+  systemGray: '#8E8E93',
+  systemGray3: '#C7C7CC',
+  score: '#FF9500',
+};

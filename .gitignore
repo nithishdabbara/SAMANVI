@@ -1,0 +1,43 @@
+# secrets and credentials
+.env
+.env.*
+!.env.example
+!.env.compose.example
+*.pem
+*.key
+*.p12
+*.jks
+*.pfx
+*.cert
+*.crt
+google-services.json
+GoogleService-Info.plist
+*service_account*.json
+*service-account*.json
+*credentials*.json
+
+# build output, archives, binaries & logs
+node_modules/
+dist/
+web-build/
+*.exe
+*.dll
+*.zip
+*.tar.gz
+*.log
+__pycache__/
+.pytest_cache/
+.expo/
+static/uploads/
+
+# environments
+venv/
+.venv/
+backend/venv/
+
+# local design assets, project documents & release files (kept offline)
+app design images/
+samanvi project files/
+mockups/
+package_release.py
+SAMANVI_Final_Stage3_3.zip

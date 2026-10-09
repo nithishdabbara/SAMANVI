@@ -1,0 +1,51 @@
+# Root .dockerignore for SAMANVI
+
+# Secrets and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+*.pfx
+*.cert
+*.crt
+*service_account*.json
+*service-account*.json
+*credentials*.json
+google-services.json
+GoogleService-Info.plist
+
+# Mobile and frontend directories (kept out of backend image)
+app1/
+node_modules/
+.expo/
+dist/
+website/
+mockups/
+app design images/
+samanvi project files/
+
+# Release archives
+*.zip
+
+# Python caches and virtualenvs
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+venv/
+.venv/
+backend/venv/
+
+# Local binaries and logs
+*.exe
+cloudflared.exe
+*.log
+
+# Git
+.git/
+.github/

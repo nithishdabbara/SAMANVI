@@ -1,0 +1,56 @@
+# Environment secrets and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+*.pfx
+*.cert
+*.crt
+*service_account*.json
+*service-account*.json
+*credentials*.json
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# Version control and IDE artifacts
+.git/
+.gitignore
+.gitattributes
+.github/
+.idea/
+.vscode/
+
+# Local binaries and non-production files
+cloudflared.exe
+*.exe
+*.dll
+*.dylib
+
+# Test suites and migration verification scripts (run during CI/CD, not in prod image)
+test_*.py
+verify_*.py
+tests/
+
+# Local logs and user uploads
+*.log
+static/uploads/*
+!static/uploads/.gitkeep
+scratch/
