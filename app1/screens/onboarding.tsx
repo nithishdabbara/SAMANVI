@@ -229,6 +229,9 @@ export function RegPhone() {
       });
       const data = await res.json();
       if (res.ok) {
+        if (data.dev_otp) {
+          Alert.alert('TEST OTP', `Your test OTP is: ${data.dev_otp}`);
+        }
         regState.phone = phone;
         go('rotp');
       } else {
@@ -325,15 +328,45 @@ export function RegAadhaar() {
   const [aad, setAad] = useState('');
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
+  const [loading, setLoading] = useState(false);
   const ok = name.trim().length > 1 && aad.length === 12 && email.includes('@') && pw.length >= 6;
   const spaced = aad.replace(/(\d{4})(?=\d)/g, '$1 ');
+
+  const handleSendAadhaar = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/send-aadhaar-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ aadhaar: aad, phone: regState.phone })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (data.dev_otp) {
+          Alert.alert('TEST AADHAAR OTP', `Your Aadhaar Sandbox OTP is: ${data.dev_otp}`);
+        }
+        regState.name = name;
+        regState.aadhaar = aad;
+        regState.email = email;
+        regState.password = pw;
+        go('raotp');
+      } else {
+        Alert.alert('Aadhaar Failed', data.error || 'Could not verify Aadhaar number.');
+      }
+    } catch (e: any) {
+      Alert.alert('Network Error', e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <RegShell step={3} back="rotp" title="Aadhaar Identity Lock" sub="Validate your credentials and full identity using Aadhaar.">
-      <Field label="FULL NAME (AS ON AADHAAR)" icon="person-outline" placeholder="e.g. Nithish Kumar" value={name} onChangeText={(v) => { setName(v); regState.name = v; }} />
-      <Field label="AADHAAR NUMBER (12-DIGITS)" icon="card-outline" placeholder="e.g. 3674 8291 6916" keyboardType="number-pad" value={spaced} onChangeText={(v) => { const val = digits(v, 12); setAad(val); regState.aadhaar = val; }} />
-      <Field label="EMAIL ADDRESS (FOR UPDATES)" icon="mail-outline" placeholder="e.g. nithish@gmail.com" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={(v) => { setEmail(v); regState.email = v; }} />
-      <Field label="SECURE PASSWORD" icon="lock-closed-outline" placeholder="Enter password (6+ chars)" secureTextEntry value={pw} onChangeText={(v) => { setPw(v); regState.password = v; }} />
-      <Button title="Verify Identity" disabled={!ok} onPress={() => go('raotp')} style={{ marginTop: 20 }} />
+      <Field label="FULL NAME (AS ON AADHAAR)" icon="person-outline" placeholder="e.g. Nithish Kumar" value={name} onChangeText={setName} />
+      <Field label="AADHAAR NUMBER (12-DIGITS)" icon="card-outline" placeholder="e.g. 3674 8291 6916" keyboardType="number-pad" value={spaced} onChangeText={(v) => { const val = digits(v, 12); setAad(val); }} />
+      <Field label="EMAIL ADDRESS (FOR UPDATES)" icon="mail-outline" placeholder="e.g. nithish@gmail.com" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
+      <Field label="SECURE PASSWORD" icon="lock-closed-outline" placeholder="Enter password (6+ chars)" secureTextEntry value={pw} onChangeText={setPw} />
+      <Button title={loading ? "Sending..." : "Verify Identity"} disabled={!ok || loading} onPress={handleSendAadhaar} style={{ marginTop: 20 }} />
       <Sub center style={{ fontSize: 11, marginTop: 10 }}>Aadhaar is stored only as a SHA-256 hash + last 4 digits.</Sub>
     </RegShell>
   );
@@ -342,10 +375,40 @@ export function RegAadhaar() {
 export function RegAadhaarOtp() {
   const go = useGo();
   const [otp, setOtp] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleVerifyAadhaar = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/verify-aadhaar-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          aadhaar: regState.aadhaar,
+          otp: otp,
+          phone: regState.phone,
+          name: regState.name
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.aadhaar_verification_token) {
+        regState.aadhaar_verification_token = data.aadhaar_verification_token;
+        regState.name = data.full_name || regState.name;
+        go('rlock');
+      } else {
+        Alert.alert('Verification Failed', data.error || 'Incorrect OTP.');
+      }
+    } catch (e: any) {
+      Alert.alert('Network Error', e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <RegShell step={4} back="raad" title="Aadhaar Identity Lock" sub="Verify the 6-digit passcode sent for Aadhaar identity.">
       <Field label="ENTER 6-DIGIT AADHAAR OTP" icon="shield-checkmark-outline" placeholder="6-digit code" keyboardType="number-pad" value={otp} onChangeText={(v) => setOtp(digits(v, 6))} style={{ letterSpacing: 6, fontWeight: '600' }} />
-      <Button title="Verify Aadhaar Identity" disabled={otp.length !== 6} onPress={() => go('rlock')} style={{ marginTop: 22 }} />
+      <Button title={loading ? "Verifying..." : "Verify Aadhaar Identity"} disabled={otp.length !== 6 || loading} onPress={handleVerifyAadhaar} style={{ marginTop: 22 }} />
     </RegShell>
   );
 }
@@ -403,7 +466,7 @@ export function RegLock() {
                 password: regState.password,
                 name: regState.name,
                 phone: regState.phone,
-                aadhaar: regState.aadhaar,
+                aadhaar_token: regState.aadhaar_verification_token,
                 latitude: coords.latitude,
                 longitude: coords.longitude
               })

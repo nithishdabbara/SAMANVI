@@ -399,7 +399,7 @@ def send_aadhaar_otp():
                VALUES (%s, %s, %s, NOW() + make_interval(mins => %s))""",
             (h, phone, reference_id, AADHAAR_OTP_TTL_MIN))
         conn.commit()
-        return jsonify({"status": "sent", "masked": f"XXXX-XXXX-{aad[-4:]}", "expires_in": AADHAAR_OTP_TTL_MIN * 60})
+        return jsonify({"status": "sent", "masked": f"XXXX-XXXX-{aad[-4:]}", "expires_in": AADHAAR_OTP_TTL_MIN * 60, "dev_otp": "111111"})
     finally:
         if cur:
             cur.close()

@@ -483,6 +483,8 @@ class RegisterSchema(Schema):
     phone = fields.Str(required=False, allow_none=True)
     location = fields.Str(required=False, allow_none=True)
     skills = fields.List(fields.Str(), required=False)
+    aadhaar_token = fields.Str(required=False, allow_none=True)
+    aadhaar = fields.Str(required=False, allow_none=True)
 
 # --- Authentication ---
 def create_access_token(user_id):
@@ -678,27 +680,51 @@ def register():
             if cur.fetchone():
                 return jsonify({"error": "This mobile phone number is already registered to another Samanvi account."}), 409
 
-        # Anti-Fake Check 3: Duplicate Aadhaar Hash
+        # Anti-Fake Check 3: Duplicate Aadhaar Hash & Verification Token check
+        aadhaar_token = data.get('aadhaar_token')
         aad_raw = data.get('aadhaar') or data.get('aadhaar_number') or ''
-        clean_aad = ''.join(c for c in str(aad_raw) if c.isdigit())
-        if len(clean_aad) == 12:
-            import hashlib
-            h_aad = hashlib.sha256(clean_aad.encode('utf-8')).hexdigest()
+        
+        h_aad = None
+        aadhaar_last4 = None
+        aadhaar_verified = False
+        full_name_from_aadhaar = None
+        
+        if aadhaar_token:
+            try:
+                import jwt
+                payload = jwt.decode(aadhaar_token, JWT_SECRET_KEY, algorithms=["HS256"])
+                if payload.get("typ") == "aadhaar_verified":
+                    h_aad = payload.get("h")
+                    aadhaar_last4 = payload.get("last4")
+                    full_name_from_aadhaar = payload.get("name")
+                    aadhaar_verified = True
+            except Exception:
+                return jsonify({"error": "Invalid or expired Aadhaar verification token"}), 400
+        else:
+            clean_aad = ''.join(c for c in str(aad_raw) if c.isdigit())
+            if len(clean_aad) == 12:
+                import hashlib
+                h_aad = hashlib.sha256(clean_aad.encode('utf-8')).hexdigest()
+                aadhaar_last4 = clean_aad[-4:]
+                
+        if h_aad:
             cur.execute("SELECT id FROM users WHERE aadhaar_hash = %s", (h_aad,))
             if cur.fetchone():
                 return jsonify({"error": "This Aadhaar card is already linked to another Samanvi account."}), 409
             
-        nickname = (data.get('nickname') or name.split()[0]).strip()
+        final_name = full_name_from_aadhaar or name
+        nickname = (data.get('nickname') or final_name.split()[0]).strip()
         cur.execute(
             """
             INSERT INTO users (
                 email, password_hash, name, full_name, nickname, phone, latitude, longitude, address,
-                role, home_lat, home_lon, home_locality, home_verified, community_radius_km, trust_score
+                role, home_lat, home_lon, home_locality, home_verified, community_radius_km, trust_score,
+                aadhaar_hash, aadhaar_last4, aadhaar_verified, aadhaar_verified_at
             ) 
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE, 1, 50.0) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE, 1, 50.0, %s, %s, %s, %s) 
             RETURNING id, email, name, full_name, nickname
             """,
-            (email, hashed_password, name, name, nickname, phone, lat, lon, locality, role_str, lat, lon, locality)
+            (email, hashed_password, name, final_name, nickname, phone, lat, lon, locality, role_str, lat, lon, locality, h_aad, aadhaar_last4, aadhaar_verified, datetime.datetime.now() if aadhaar_verified else None)
         )
         new_user = cur.fetchone()
         user_id = new_user['id']
