@@ -3,7 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import * as SplashScreen from 'expo-splash-screen';
 import { LogBox, Platform } from 'react-native';
-import { ThemeProvider, DefaultTheme } from '@react-navigation/native';
+
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useIconFonts } from '@/src/hooks/use-icon-fonts';
@@ -109,7 +109,7 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontsErr) return null;
 
   return (
-    <ThemeProvider value={DefaultTheme}>
+    <>
       <Stack screenOptions={{
         animation: 'slide_from_right',
         gestureEnabled: true,
@@ -159,7 +159,7 @@ export default function RootLayout() {
         <Stack.Screen name="qr" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="dark" />
-    </ThemeProvider>
+    </>
   );
 }
 
