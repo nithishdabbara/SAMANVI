@@ -305,7 +305,7 @@ def deliver_otp(phone, otp, channel="sms"):
         if channel == "whatsapp":
             raise OtpError("whatsapp_not_configured", "WhatsApp delivery is not configured on this server.", 501)
         log.warning("TESTING MODE: OTP issued for %s is: %s", phone, otp)
-        return {"gateway": "dev", "dev_otp": otp}
+        return {"gateway": "dev"}
     raise OtpError("provider_unavailable", "SMS provider is not configured.", 503)
 
 

@@ -399,7 +399,7 @@ def send_aadhaar_otp():
                VALUES (%s, %s, %s, NOW() + make_interval(mins => %s))""",
             (h, phone, reference_id, AADHAAR_OTP_TTL_MIN))
         conn.commit()
-        return jsonify({"status": "sent", "masked": f"XXXX-XXXX-{aad[-4:]}", "expires_in": AADHAAR_OTP_TTL_MIN * 60, "dev_otp": "111111"})
+        return jsonify({"status": "sent", "masked": f"XXXX-XXXX-{aad[-4:]}", "expires_in": AADHAAR_OTP_TTL_MIN * 60})
     finally:
         if cur:
             cur.close()
@@ -551,7 +551,16 @@ def verify_aadhaar_otp_registration():
     if not conn:
         return jsonify({"error": "Service temporarily unavailable"}), 503
     try:
-        result = _verify_aadhaar_challenge(conn, aad, otp, data.get("name") or data.get("full_name"), req_phone)
+        if AADHAAR_MOCK_MODE:
+            if is_production_environment():
+                return jsonify({"error": "Real Aadhaar integration is pending. Mock mode is disabled."}), 503
+            if aad != "000000000000":
+                return jsonify({"error": "Real Aadhaar data is not collected during beta. Use the test identifier 000000000000."}), 400
+            if otp != AADHAAR_MOCK_OTP:
+                return jsonify({"error": "Invalid OTP"}), 400
+            result = {"last4": "0000", "full_name": "Test User", "challenge_id": "mock_challenge", "hash": _hash_aadhaar(aad)}
+        else:
+            result = _verify_aadhaar_challenge(conn, aad, otp, data.get("name") or data.get("full_name"), req_phone)
         full_name = result["full_name"]
         return jsonify({
             "ok": True, "aadhaar_verified": True, "last4": result["last4"],

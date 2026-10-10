@@ -1,5 +1,5 @@
 import Constants from 'expo-constants';
-import { createClient } from '@supabase/supabase-js';
+
 
 // Explicitly configured backend URL from environment
 const CONFIGURED_URL = process.env.EXPO_PUBLIC_API_URL || 
@@ -20,14 +20,8 @@ export const API_BASE_URL = rawBaseUrl.replace(/\/$/, '');
 
 export function requireApiBaseUrl(): string {
   if (!API_BASE_URL) {
-    throw new Error(
-      'Backend URL is not configured. Release builds require EXPO_PUBLIC_API_URL (e.g., EXPO_PUBLIC_API_URL=http://10.82.19.144:5000/api) in app1/.env before building.'
-    );
+    throw new Error('Backend URL is not configured.');
   }
   return API_BASE_URL;
 }
 
-export const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://fqtomhfurpcyprznhpox.supabase.co';
-export const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'placeholder_supabase_anon_key';
-
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);

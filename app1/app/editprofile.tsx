@@ -26,10 +26,11 @@ export default function EditProfileScreen() {
       });
       if (res.ok) {
         const data = await res.json();
-        setName(data.name || '');
-        setHood(data.description || '');
-        if (data.bio) {
-          setSkills(data.bio.split(', ').filter((s: string) => s));
+        const p = data.profile || data;
+        setName(p.name || '');
+        setHood(p.description || '');
+        if (p.bio) {
+          setSkills(p.bio.split(', ').filter((s: string) => s));
         }
       }
     } catch (e) {

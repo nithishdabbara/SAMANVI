@@ -9,6 +9,14 @@ export default function ExportScreen() {
   const options = ['Profile and trust history', 'My posts and offers', 'Chat history'];
   const [toggles, setToggles] = useState({ 0: true, 1: true, 2: true });
 
+  React.useEffect(() => {
+    import('expo-secure-store').then(SecureStore => {
+      SecureStore.getItemAsync('userToken').then(token => {
+        if (!token) router.replace('/');
+      });
+    });
+  }, []);
+
   const toggleOption = (i: number) => {
     setToggles(prev => ({ ...prev, [i]: !prev[i as keyof typeof toggles] }));
   };

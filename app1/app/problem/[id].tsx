@@ -22,6 +22,7 @@ import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '../../constants/Config';
 import ConfirmButton from '../../components/ConfirmButton';
 import VoteButton from '../../components/VoteButton';
+import dayjs from 'dayjs';
 
 const StatusTimeline = ({ activeIndex }: { activeIndex: number }) => {
   const steps = ['Posted', 'Helper Found', 'En Route', 'Arrived', 'Resolved'];
@@ -580,7 +581,7 @@ export default function ProblemDetailsScreen() {
                 {problem.status === 'resolved' ? 'RESOLVED' : `${problem.priority?.toUpperCase()} PRIORITY`}
               </Text>
             </View>
-            <Text style={styles.timeText}>{new Date(problem.created_at).toLocaleDateString()}</Text>
+            <Text style={styles.timeText}>{dayjs(problem.created_at).format('MMM D, YYYY h:mm A')}</Text>
           </View>
 
           {/* Status Timeline */}

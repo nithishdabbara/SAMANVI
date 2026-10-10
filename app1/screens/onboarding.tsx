@@ -208,7 +208,8 @@ const regState = {
   name: '',
   aadhaar: '',
   email: '',
-  password: ''
+  password: '',
+  aadhaar_verification_token: ''
 };
 
 export function RegPhone() {
@@ -229,9 +230,6 @@ export function RegPhone() {
       });
       const data = await res.json();
       if (res.ok) {
-        if (data.dev_otp) {
-          Alert.alert('TEST OTP', `Your test OTP is: ${data.dev_otp}`);
-        }
         regState.phone = phone;
         go('rotp');
       } else {
@@ -252,7 +250,7 @@ export function RegPhone() {
 
   return (
     <RegShell step={1} back="welcome" title="Phone OTP Verification" sub="Enter your mobile number to receive your login code.">
-      <Field label="MOBILE NUMBER" prefix="+91" placeholder="Enter 10-digit number" keyboardType="number-pad" value={phone} onChangeText={(v) => { const val = digits(v, 10); setPhone(val); regState.phone = val; }} />
+      <Field label="MOBILE NUMBER" prefix="+91" placeholder="Enter 10-digit number" keyboardType="number-pad" maxLength={10} value={phone} onChangeText={(v) => { const val = digits(v, 10); setPhone(val); regState.phone = val; }} />
       <Sub style={{ fontSize: 11 }}>Your number is stored securely and never shown to others.</Sub>
       <Button title={loading ? "Sending Code..." : "Send Verification Code"} disabled={!ok || loading} onPress={() => handleSendOtp('sms')} style={{ marginTop: 22 }} />
       <Button title="Get OTP via WhatsApp" kind="whatsapp" icon="logo-whatsapp" disabled={!ok || loading} onPress={() => handleSendOtp('whatsapp')} style={{ marginTop: 10 }} />
@@ -313,7 +311,7 @@ export function RegOtp() {
 
   return (
     <RegShell step={2} back="rphone" title="Phone OTP Verification" sub="Please enter the verification code sent to your device.">
-      <Field label="ENTER 6-DIGIT OTP" icon="key-outline" placeholder="6-digit code" keyboardType="number-pad" value={otp} onChangeText={(v) => setOtp(digits(v, 6))} style={{ letterSpacing: 6, fontWeight: '600' }} />
+      <Field label="ENTER 6-DIGIT OTP" icon="key-outline" placeholder="6-digit code" keyboardType="number-pad" maxLength={6} value={otp} onChangeText={(v) => setOtp(digits(v, 6))} style={{ letterSpacing: 6, fontWeight: '600' }} />
       <Button title={verifying ? "Verifying..." : "Verify & Continue"} disabled={otp.length !== 6 || verifying} onPress={handleVerify} style={{ marginTop: 22 }} />
       <Text style={{ color: t.mute, textAlign: 'center', marginTop: 16 }}>
         {left > 0 ? <>Resend OTP in <Text style={{ color: t.blue, fontWeight: '700' }}>{left}</Text>s</> : <Text style={{ color: t.blue, fontWeight: '700' }} onPress={handleResend}>Resend OTP</Text>}
@@ -342,9 +340,6 @@ export function RegAadhaar() {
       });
       const data = await res.json();
       if (res.ok) {
-        if (data.dev_otp) {
-          Alert.alert('TEST AADHAAR OTP', `Your Aadhaar Sandbox OTP is: ${data.dev_otp}`);
-        }
         regState.name = name;
         regState.aadhaar = aad;
         regState.email = email;
@@ -362,9 +357,9 @@ export function RegAadhaar() {
 
   return (
     <RegShell step={3} back="rotp" title="Aadhaar Identity Lock" sub="Validate your credentials and full identity using Aadhaar.">
-      <Field label="FULL NAME (AS ON AADHAAR)" icon="person-outline" placeholder="e.g. Nithish Kumar" value={name} onChangeText={setName} />
-      <Field label="AADHAAR NUMBER (12-DIGITS)" icon="card-outline" placeholder="e.g. 3674 8291 6916" keyboardType="number-pad" value={spaced} onChangeText={(v) => { const val = digits(v, 12); setAad(val); }} />
-      <Field label="EMAIL ADDRESS (FOR UPDATES)" icon="mail-outline" placeholder="e.g. nithish@gmail.com" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
+      <Field label="FULL NAME (AS ON AADHAAR)" icon="person-outline" placeholder="e.g. Nithish Kumar" maxLength={50} value={name} onChangeText={setName} />
+      <Field label="AADHAAR NUMBER (12-DIGITS)" icon="card-outline" placeholder="e.g. 3674 8291 6916" keyboardType="number-pad" maxLength={14} value={spaced} onChangeText={(v) => { const val = digits(v, 12); setAad(val); }} />
+      <Field label="EMAIL ADDRESS (FOR UPDATES)" icon="mail-outline" placeholder="e.g. nithish@gmail.com" autoCapitalize="none" keyboardType="email-address" maxLength={100} value={email} onChangeText={setEmail} />
       <Field label="SECURE PASSWORD" icon="lock-closed-outline" placeholder="Enter password (6+ chars)" secureTextEntry value={pw} onChangeText={setPw} />
       <Button title={loading ? "Sending..." : "Verify Identity"} disabled={!ok || loading} onPress={handleSendAadhaar} style={{ marginTop: 20 }} />
       <Sub center style={{ fontSize: 11, marginTop: 10 }}>Aadhaar is stored only as a SHA-256 hash + last 4 digits.</Sub>
@@ -407,7 +402,7 @@ export function RegAadhaarOtp() {
 
   return (
     <RegShell step={4} back="raad" title="Aadhaar Identity Lock" sub="Verify the 6-digit passcode sent for Aadhaar identity.">
-      <Field label="ENTER 6-DIGIT AADHAAR OTP" icon="shield-checkmark-outline" placeholder="6-digit code" keyboardType="number-pad" value={otp} onChangeText={(v) => setOtp(digits(v, 6))} style={{ letterSpacing: 6, fontWeight: '600' }} />
+      <Field label="ENTER 6-DIGIT AADHAAR OTP" icon="shield-checkmark-outline" placeholder="6-digit code" keyboardType="number-pad" maxLength={6} value={otp} onChangeText={(v) => setOtp(digits(v, 6))} style={{ letterSpacing: 6, fontWeight: '600' }} />
       <Button title={loading ? "Verifying..." : "Verify Aadhaar Identity"} disabled={otp.length !== 6 || loading} onPress={handleVerifyAadhaar} style={{ marginTop: 22 }} />
     </RegShell>
   );

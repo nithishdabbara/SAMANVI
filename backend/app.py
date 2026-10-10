@@ -464,12 +464,19 @@ class CreateProblemSchema(Schema):
 class RegisterSchema(Schema):
     name = fields.Str(
         required=True,
-        validate=validate.Length(min=2, max=100)
+        validate=[
+            validate.Length(min=2, max=100),
+            validate.Regexp(r'^[a-zA-Z\s]+$', error="Name must contain only letters and spaces")
+        ]
     )
     email = fields.Email(required=True)
     password = fields.Str(
         required=True,
-        validate=validate.Length(min=6)
+        validate=[
+            validate.Length(min=8, max=72),
+            validate.Regexp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$',
+                            error="Password must contain at least one uppercase letter, one lowercase letter, one number and one special character")
+        ]
     )
     role_id = fields.Int(
         required=False,
@@ -621,12 +628,27 @@ def get_community_stats(current_user_id):
         if conn is not None:
             conn.close()
 
+def normalize_email(email):
+    """Normalize gmail addresses by stripping +aliases and dots to prevent duplicate accounts."""
+    if not isinstance(email, str):
+        return ""
+    email = email.lower().strip()
+    if '@' in email:
+        local, domain = email.split('@', 1)
+        if domain == 'gmail.com':
+            local = local.split('+')[0].replace('.', '')
+        return f"{local}@{domain}"
+    return email
+
 def validate_password(password):
     """Return an error message, or None if acceptable.  (bcrypt only uses the first 72 bytes.)"""
-    if not isinstance(password, str) or len(password) < 6:
-        return "Password must be at least 6 characters."
+    if not isinstance(password, str) or len(password) < 8:
+        return "Password must be at least 8 characters."
     if len(password.encode('utf-8')) > 72:
         return "Password must be at most 72 bytes."
+    import re
+    if not re.match(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$', password):
+        return "Password must contain at least one uppercase letter, one lowercase letter, one number and one special character."
     return None
 
 
@@ -643,7 +665,7 @@ def register():
         return jsonify({"errors": errors}), 400
         
     data = schema.load(request.json)
-    email = data['email']
+    email = normalize_email(data['email'])
     password = data['password']
     name = data['name']
     phone = data.get('phone', '')
@@ -781,7 +803,7 @@ def register():
 @limiter.limit("60 per hour")
 def login():
     data = request.get_json(silent=True) or {}
-    identifier = data.get('email') or data.get('phone') or data.get('identifier')
+    identifier = normalize_email(data.get('email') or data.get('phone') or data.get('identifier') or '')
     password = data.get('password')
 
     if not identifier or not password:
@@ -957,6 +979,9 @@ def reset_password_api():
 @token_required
 def get_user_profile(current_user_id):
     conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Service temporarily unavailable"}), 503
+    cur = None
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("""
@@ -968,7 +993,7 @@ def get_user_profile(current_user_id):
         if not user:
             return jsonify({"error": "User not found"}), 404
 
-        if user['created_at']:
+        if user['created_at'] and hasattr(user['created_at'], 'isoformat'):
             user['created_at'] = user['created_at'].isoformat()
 
         cur.execute("SELECT skill_name FROM user_skills WHERE user_id = %s", (current_user_id,))
@@ -992,8 +1017,10 @@ def get_user_profile(current_user_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
-        cur.close()
-        conn.close()
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
 
 @app.route('/api/user/activity', methods=['GET'])
 @token_required
@@ -1178,7 +1205,13 @@ def update_user_profile(current_user_id):
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("""
-            UPDATE users SET name = %s, phone = %s, bio = %s, description = %s, availability_status = %s, updated_at = CURRENT_TIMESTAMP
+            UPDATE users 
+            SET name = COALESCE(%s, name), 
+                phone = COALESCE(%s, phone), 
+                bio = COALESCE(%s, bio), 
+                description = COALESCE(%s, description), 
+                availability_status = COALESCE(%s, availability_status), 
+                updated_at = CURRENT_TIMESTAMP
             WHERE id = %s RETURNING id, name, phone, bio, description, availability_status
         """, (name, phone, bio, description, availability, current_user_id))
         updated_user = cur.fetchone()
@@ -1400,32 +1433,29 @@ def get_notifications(current_user_id):
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("""
-            SELECT id, title, message, type as notification_type, is_read, data, created_at
+            SELECT id, title, body as message, type as notification_type, related_id, is_read, created_at
             FROM notifications
             WHERE user_id = %s
             ORDER BY created_at DESC
             LIMIT 50
-        """, (current_user_id,))
+        """, (str(current_user_id),))
         notifs = cur.fetchall()
         for n in notifs:
             n['id'] = str(n['id'])
-            # Parse data JSON for route mapping
-            if n.get('data'):
-                if isinstance(n['data'], str):
-                    try:
-                        import json
-                        n['data'] = json.loads(n['data'])
-                    except:
-                        pass
-                
-                # Map to routes for frontend
-                d = n['data']
-                if n['notification_type'] == 'chat_message':
-                    n['data_route'] = f"/chat/{d.get('sender_id', '')}"
-                elif n['notification_type'] == 'offer':
-                    n['data_route'] = '/offers'
-                elif n['notification_type'] == 'arrival_verified':
-                    n['data_route'] = f"/chat/{d.get('helper_id', '')}"
+            
+            # Map to routes for frontend
+            if n['notification_type'] == 'chat_message' and n.get('related_id'):
+                cur.execute("SELECT sender_id FROM messages WHERE id = %s", (str(n['related_id']),))
+                msg_row = cur.fetchone()
+                if msg_row:
+                    n['data_route'] = f"/chat/{msg_row['sender_id']}"
+            elif n['notification_type'] == 'offer':
+                n['data_route'] = '/offers'
+            elif n['notification_type'] == 'arrival_verified' and n.get('related_id'):
+                cur.execute("SELECT helper_id FROM help_offers WHERE id = %s", (str(n['related_id']),))
+                offer_row = cur.fetchone()
+                if offer_row:
+                    n['data_route'] = f"/chat/{offer_row['helper_id']}"
                 
             n['type'] = n['notification_type']
             n['time'] = n['created_at'].isoformat() if n['created_at'] else ''
@@ -1450,6 +1480,52 @@ def mark_notification_read(current_user_id, notif_id):
         cur.close()
         conn.close()
 
+@app.route('/api/notifications/<uuid:notification_id>', methods=['DELETE'])
+@token_required
+def delete_notification(current_user_id, notification_id):
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database unavailable"}), 500
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            DELETE FROM notifications 
+            WHERE id = %s AND user_id = %s
+            RETURNING id
+        """, (str(notification_id), str(current_user_id)))
+        row = cur.fetchone()
+        conn.commit()
+        if not row:
+            return jsonify({"error": "Notification not found or access denied."}), 404
+        return jsonify({"ok": True, "message": "Notification deleted."}), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+@app.route('/api/notifications/read-all', methods=['PUT'])
+@token_required
+def mark_all_notifications_read(current_user_id):
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database unavailable"}), 500
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE notifications 
+            SET is_read = TRUE, updated_at = NOW() 
+            WHERE user_id = %s AND is_read = FALSE
+        """, (str(current_user_id),))
+        conn.commit()
+        return jsonify({"ok": True}), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
 
 @app.route('/api/helpers', methods=['GET'])
 @token_required
@@ -1486,7 +1562,7 @@ def get_helpers(current_user_id):
                    COALESCE(loc.name, 'Local Neighborhood') as locality_name,
                    (COALESCE(u.is_verified, FALSE) OR COALESCE(u.aadhaar_verified, FALSE)) as is_verified,
                    ARRAY_AGG(s.skill_name) FILTER (WHERE s.skill_name IS NOT NULL) as skills,
-                   {dist_sql} as distance
+                   {dist_sql} as distance, u.home_lat as lat, u.home_lon as lng
             FROM users u
             LEFT JOIN localities loc ON u.locality_id = loc.id
             LEFT JOIN user_skills s ON u.id = s.user_id
@@ -1510,7 +1586,9 @@ def get_helpers(current_user_id):
                 "address": r['locality_name'] or 'Local Neighborhood',
                 "is_verified": bool(r['is_verified']),
                 "skills": [s for s in (r['skills'] or []) if s] or ["Community Support", "General Aid"],
-                "distance": float(r['distance']) if r['distance'] is not None else None
+                "distance": float(r['distance']) if r['distance'] is not None else None,
+                "lat": float(r['lat']) if r['lat'] is not None else None,
+                "lng": float(r['lng']) if r['lng'] is not None else None
             })
         return jsonify({"helpers": helpers_list}), 200
     except Exception as e:
@@ -1551,9 +1629,7 @@ def get_problems(current_user_id):
         home_lat = float(request.args.get('lat') or user['home_lat'])
         home_lon = float(request.args.get('lng') or request.args.get('lon') or user['home_lon'])
         radius_km = float(request.args.get('radius') or user.get('community_radius_km') or 50.0)
-        if radius_km < 10.0:
-            radius_km = 50.0  # Expand search radius so users see nearby community problems
-        
+        # Allow short search radiuses as requested by the user
         # Haversine distance calculation in SQL (km)
         dist_sql = f"(6371 * acos(least(1.0, greatest(-1.0, cos(radians({home_lat})) * cos(radians(p.latitude)) * cos(radians(p.longitude) - radians({home_lon})) + sin(radians({home_lat})) * sin(radians(p.latitude))))))"
         
@@ -2430,7 +2506,7 @@ def trigger_sos(current_user_id):
                 {"me": current_user_id, "lat": user['home_lat'], "lon": user['home_lon'], "radius": user['radius_km']})
             neighbors = cur.fetchall()
             for n in neighbors:
-                cur.execute("INSERT INTO notifications (user_id, title, body, type) VALUES (%s, %s, %s, %s)",
+                cur.execute("INSERT INTO notifications (user_id, title, message, type) VALUES (%s, %s, %s, %s)",
                             (n['id'], "EMERGENCY SOS", f"{user['name']} pressed the SOS button nearby!", "sos"))
 
         cur.execute("SELECT name, phone FROM emergency_contacts WHERE user_id = %s", (current_user_id,))
@@ -3079,102 +3155,6 @@ def delete_emergency_contact(current_user_id, contact_id):
         conn.rollback()
         return jsonify({"error": str(e)}), 500
     finally:
-        conn.close()
-
-# --- In-App Notification Feed & Status Endpoints ---
-
-@app.route('/api/notifications', methods=['GET'])
-@token_required
-def get_user_notifications(current_user_id):
-    """Fetch unread/recent in-app notifications for the authenticated user."""
-    try:
-        limit = min(int(request.args.get('limit', 50)), 100)
-    except (TypeError, ValueError):
-        limit = 50
-    unread_only = request.args.get('unread_only', 'false').lower() in ('true', '1')
-
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({"error": "Database unavailable"}), 500
-    try:
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        query = """
-            SELECT id, title, body, type, related_id, is_read, push_status, created_at
-            FROM notifications
-            WHERE user_id = %s AND is_active = TRUE
-        """
-        params = [str(current_user_id)]
-        if unread_only:
-            query += " AND is_read = FALSE"
-        query += " ORDER BY created_at DESC LIMIT %s"
-        params.append(limit)
-
-        cur.execute(query, tuple(params))
-        rows = cur.fetchall()
-        for r in rows:
-            r['id'] = str(r['id'])
-            if r.get('related_id'):
-                r['related_id'] = str(r['related_id'])
-            if r.get('created_at'):
-                r['created_at'] = r['created_at'].isoformat()
-
-        return jsonify(rows), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    finally:
-        cur.close()
-        conn.close()
-
-
-@app.route('/api/notifications/<uuid:notification_id>/read', methods=['PUT'])
-@token_required
-def mark_notification_read(current_user_id, notification_id):
-    """Mark a specific notification as read, enforcing strict user ownership."""
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({"error": "Database unavailable"}), 500
-    try:
-        cur = conn.cursor()
-        cur.execute("""
-            UPDATE notifications 
-            SET is_read = TRUE, updated_at = NOW() 
-            WHERE id = %s AND user_id = %s
-            RETURNING id
-        """, (str(notification_id), str(current_user_id)))
-        row = cur.fetchone()
-        conn.commit()
-        if not row:
-            return jsonify({"error": "Notification not found or access denied."}), 404
-        return jsonify({"ok": True, "message": "Notification marked as read."}), 200
-    except Exception as e:
-        conn.rollback()
-        return jsonify({"error": str(e)}), 500
-    finally:
-        cur.close()
-        conn.close()
-
-
-@app.route('/api/notifications/read-all', methods=['PUT'])
-@token_required
-def mark_all_notifications_read(current_user_id):
-    """Mark all unread notifications as read for authenticated user."""
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({"error": "Database unavailable"}), 500
-    try:
-        cur = conn.cursor()
-        cur.execute("""
-            UPDATE notifications 
-            SET is_read = TRUE, updated_at = NOW() 
-            WHERE user_id = %s AND is_read = FALSE
-        """, (str(current_user_id),))
-        conn.commit()
-        return jsonify({"ok": True, "message": "All notifications marked as read."}), 200
-    except Exception as e:
-        conn.rollback()
-        return jsonify({"error": str(e)}), 500
-    finally:
-        cur.close()
         conn.close()
 
 

@@ -110,7 +110,7 @@ export default function IndividualChatScreen() {
     fetchChat(true);
 
     let isMounted = true;
-    let pollInterval: NodeJS.Timeout;
+    let pollInterval: any;
 
     const startPolling = () => {
       pollInterval = setInterval(() => {

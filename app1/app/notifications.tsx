@@ -42,8 +42,23 @@ export default function NotificationsScreen() {
     router.push(route as any);
   };
 
+  const deleteNotification = async (id: string) => {
+    try {
+      const token = await SecureStore.getItemAsync('userToken');
+      const response = await fetch(`${API_BASE_URL}/notifications/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        setNotifications(prev => prev.filter(n => n.id !== id));
+      }
+    } catch (e) {
+      console.log('Error deleting notification', e);
+    }
+  };
+
   const getIcon = (type: string) => {
-    if (type === 'message') return { name: 'chatbubbles', color: '#0a84ff' };
+    if (type === 'message' || type === 'chat_message') return { name: 'chatbubbles', color: '#0a84ff' };
     if (type === 'offer') return { name: 'people', color: '#0a84ff' };
     if (type === 'arrival_verified') return { name: 'checkmark-circle', color: '#30d158' };
     if (type === 'problem_resolved') return { name: 'star', color: '#ff9f0a' };
@@ -71,16 +86,21 @@ export default function NotificationsScreen() {
               const ic = getIcon(n.type);
               const isUnread = !n.is_read;
               return (
-                <TouchableOpacity key={n.id} style={[styles.row, isUnread && styles.unreadRow]} onPress={() => markRead(n.id, n.data_route || '/(tabs)')}>
-                  <View style={[styles.iconBox, { backgroundColor: ic.color + '22' }]}>
-                    <Ionicons name={ic.name as any} size={20} color={ic.color} />
-                  </View>
-                  <View style={styles.textContainer}>
-                    <Text style={[styles.title, isUnread && {fontWeight: '800'}]}>{n.title}</Text>
-                    <Text style={styles.desc}>{n.message}</Text>
-                  </View>
-                  {isUnread && <View style={styles.unreadDot} />}
-                </TouchableOpacity>
+                <View key={n.id} style={[styles.row, isUnread && styles.unreadRow]}>
+                  <TouchableOpacity style={styles.rowContent} onPress={() => markRead(n.id, n.data_route || '/(tabs)')}>
+                    <View style={[styles.iconBox, { backgroundColor: ic.color + '22' }]}>
+                      <Ionicons name={ic.name as any} size={20} color={ic.color} />
+                    </View>
+                    <View style={styles.textContainer}>
+                      <Text style={[styles.title, isUnread && {fontWeight: '800'}]}>{n.title}</Text>
+                      <Text style={styles.desc}>{n.message}</Text>
+                    </View>
+                    {isUnread && <View style={styles.unreadDot} />}
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => deleteNotification(n.id)} style={styles.deleteBtn}>
+                    <Ionicons name="trash-outline" size={20} color="#ef4444" />
+                  </TouchableOpacity>
+                </View>
               );
             })
           )}
@@ -96,7 +116,9 @@ const styles = StyleSheet.create({
   backBtn: { flexDirection: 'row', alignItems: 'center' },
   backText: { color: '#0f172a', fontSize: 16, fontWeight: '700', marginLeft: 4 },
   list: { flex: 1, padding: 16 },
-  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', padding: 14, borderRadius: 16, marginBottom: 10, shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.03, shadowRadius: 8 },
+  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', padding: 0, borderRadius: 16, marginBottom: 10, shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.03, shadowRadius: 8 },
+  rowContent: { flex: 1, flexDirection: 'row', alignItems: 'center', padding: 14 },
+  deleteBtn: { padding: 14, justifyContent: 'center', alignItems: 'center', borderLeftWidth: 1, borderLeftColor: '#f1f5f9' },
   iconBox: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   textContainer: { flex: 1, marginLeft: 12 },
   title: { fontSize: 15, fontWeight: '700', color: '#0f172a', marginBottom: 2 },

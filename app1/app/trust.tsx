@@ -23,7 +23,7 @@ export default function TrustScreen() {
         const data = await res.json();
         // The backend returns it usually out of 100, we can divide by 20 to get a 5-star equivalent if we want, or just show the raw score.
         // Assuming trust_score starts at 50.0
-        setTrustScore(data.trust_score || 0);
+        setTrustScore(data.profile?.trust_score ?? 0);
       }
     } catch (e) {
       console.error(e);

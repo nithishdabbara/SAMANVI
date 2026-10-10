@@ -1,11 +1,34 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Defs, RadialGradient, Stop, Path, Circle } from 'react-native-svg';
+import { useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
+import { API_BASE_URL } from '../constants/Config';
 
 export default function AdminScreen() {
   const { width } = useWindowDimensions();
   const isWeb = width > 768;
+  const router = useRouter();
+
+  useEffect(() => {
+    SecureStore.getItemAsync('userToken').then(token => {
+      if (!token) {
+        router.replace('/');
+        return;
+      }
+      fetch(`${API_BASE_URL}/user/profile`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data?.profile?.role !== 'admin') {
+          router.replace('/');
+        }
+      })
+      .catch(() => router.replace('/'));
+    });
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>

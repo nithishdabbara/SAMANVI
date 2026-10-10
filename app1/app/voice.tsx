@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
   subText: { fontSize: 13, color: Colors.textSecondary, marginBottom: 10 },
   label: { fontSize: 11, fontWeight: '700', color: Colors.textSecondary, letterSpacing: 0.8, marginTop: 16, marginBottom: 6 },
   chipsWrap: { flexDirection: 'row', gap: 8, marginBottom: 14 },
-  chip: { backgroundColor: Colors.fill, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99 },
+  chip: { backgroundColor: Colors.surface, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99 },
   chipActive: { backgroundColor: Colors.primary },
   chipText: { fontSize: 13, fontWeight: '600', color: Colors.textPrimary },
   chipTextActive: { color: '#fff' },

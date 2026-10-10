@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
   backText: { fontSize: 16, fontWeight: '600', color: Colors.textPrimary, marginLeft: 4 },
   content: { padding: 16 },
   subtitle: { fontSize: 13, color: Colors.textSecondary, marginBottom: 16, lineHeight: 18 },
-  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.fill, borderRadius: 16, padding: 12, marginBottom: 8, gap: 12 },
+  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: 16, padding: 12, marginBottom: 8, gap: 12 },
   emoji: { fontSize: 24 },
   rowContent: { flex: 1 },
   rowTitle: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },

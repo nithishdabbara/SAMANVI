@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   emptyStateTitle: {
-    ...Typography.headline,
+    ...Typography.title3,
     color: Colors.label,
   },
   emptyStateDesc: {

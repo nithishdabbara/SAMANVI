@@ -153,6 +153,15 @@ export default function ProfileScreen() {
                 <Text style={styles.menuText}>Invite Neighbours</Text>
                 <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
               </TouchableOpacity>
+              
+              <TouchableOpacity style={[styles.menuItem, { borderBottomWidth: 0, marginTop: 10 }]} onPress={async () => {
+                await SecureStore.deleteItemAsync('userToken');
+                router.replace('/' as any);
+              }}>
+                <Ionicons name="log-out-outline" size={24} color="#ef4444" style={styles.menuIcon} />
+                <Text style={[styles.menuText, { color: '#ef4444' }]}>Log Out</Text>
+                <Ionicons name="chevron-forward" size={20} color="#fca5a5" />
+              </TouchableOpacity>
             </View>
           </>
         )}

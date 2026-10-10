@@ -203,15 +203,33 @@ export default function PostScreen() {
     }
   };
 
+  const pickDocument = async () => {
+    try {
+      const DocumentPicker = await import('expo-document-picker');
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const newUris = result.assets.map(a => a.uri);
+        setPhotos(prev => [...prev, ...newUris]);
+      }
+    } catch (e) {
+      console.log('Error picking document:', e);
+    } finally {
+      setShowPhotoOptions(false);
+    }
+  };
+
   const handleSubmit = async () => {
-    if (!title.trim() || !category) {
+    if (!title.trim() || !category || !description.trim()) {
       if (Platform.OS !== 'web') {
         try {
           const Haptics = require('expo-haptics');
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         } catch (e) {}
       }
-      alert('Please fill out all required fields.');
+      alert('Please fill out all required fields (title, category, description).');
       return;
     }
 
@@ -575,6 +593,7 @@ export default function PostScreen() {
                   multiline
                   numberOfLines={5}
                   textAlignVertical="top"
+                  maxLength={500}
                 />
               </View>
             </View>
@@ -596,7 +615,7 @@ export default function PostScreen() {
                       borderColor: '#0a84ff', backgroundColor: '#0a84ff10', borderWidth: 2
                     }]}
                     onPress={() => setPostType(type.id)}
-                    hapticType="selection"
+                    hapticType="light"
                   >
                     <Text style={[{ fontSize: 13, fontWeight: 'bold', color: '#0f172a' }, postType === type.id && { color: '#0a84ff' }]}>
                       {type.label.split(' ')[0]} {type.label.split(' ').slice(1).join(' ')}
@@ -684,9 +703,9 @@ export default function PostScreen() {
 
                     <TouchableOpacity 
                       style={styles.actionButton}
-                      onPress={pickImage}
+                      onPress={pickDocument}
                     >
-                      <Ionicons name="folder-open-outline" size={24} color="#0a84ff" />
+                      <Ionicons name="document-outline" size={24} color="#0a84ff" />
                       <Text style={styles.actionButtonText}>Browse Files</Text>
                     </TouchableOpacity>
 

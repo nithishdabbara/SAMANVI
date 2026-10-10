@@ -21,7 +21,7 @@ export function IOSListSection({ title, footer, children }: IOSListSectionProps)
           if (!React.isValidElement(child)) return null;
           const isLast = index === React.Children.count(children) - 1;
           return React.cloneElement(child as React.ReactElement<any>, {
-            showDivider: child.props.showDivider !== undefined ? child.props.showDivider : !isLast
+            showDivider: (child as React.ReactElement<any>).props.showDivider !== undefined ? (child as React.ReactElement<any>).props.showDivider : !isLast
           });
         })}
       </View>

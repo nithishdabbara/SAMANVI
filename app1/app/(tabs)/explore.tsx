@@ -76,7 +76,6 @@ export default function ExploreMapScreen() {
       {region ? (
         <MapView
           ref={mapRef}
-          provider="google"
           style={styles.map}
           initialCamera={{
             center: { latitude: region.latitude, longitude: region.longitude },
@@ -114,15 +113,15 @@ export default function ExploreMapScreen() {
           {neighbors.map((user) => (
             <Marker
               key={user.id}
-              coordinate={{ latitude: user.lat, longitude: user.lng }}
+              coordinate={{ latitude: Number(user.lat || user.latitude || 0), longitude: Number(user.lng || user.longitude || 0) }}
               pinColor={user.role === 'helper' ? '#34C759' : '#5E5CE6'}
             >
-              <Callout onPress={() => router.push('/trust')}>
+              <Callout onPress={() => router.push({ pathname: '/user/[id]', params: { id: user.id } })}>
                 <View style={styles.callout}>
                   <Text style={styles.calloutTitle}>{user.name}</Text>
                   <Text style={styles.calloutDesc}>{user.role}</Text>
                   <View style={styles.calloutFooter}>
-                    <Text style={styles.calloutBy}>⭐ {user.trust_score.toFixed(1)} Trust Score</Text>
+                    <Text style={styles.calloutBy}>⭐ {Number(user.trust_score || 0).toFixed(1)} Trust Score</Text>
                     <Text style={styles.calloutAction}>View Profile →</Text>
                   </View>
                 </View>

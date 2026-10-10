@@ -7,6 +7,14 @@ export default function PayScreen() {
   const router = useRouter();
   const { helperName = 'Your Helper' } = useLocalSearchParams();
   
+  React.useEffect(() => {
+    import('expo-secure-store').then(SecureStore => {
+      SecureStore.getItemAsync('userToken').then(token => {
+        if (!token) router.replace('/');
+      });
+    });
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
