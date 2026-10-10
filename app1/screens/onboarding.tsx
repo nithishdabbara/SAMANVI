@@ -231,11 +231,11 @@ export function RegPhone() {
       const data = await res.json();
       if (res.ok) {
         regState.phone = phone;
-        Alert.alert('Development OTP', 'Please enter 123456 to verify.', [{ text: 'OK', onPress: () => go('rotp') }]);
+        Alert.alert('Development OTP', 'Please enter ' + (data.dev_otp || '123456') + ' to verify.', [{ text: 'OK', onPress: () => go('rotp') }]);
       } else {
         if (data.code === 'sms_disabled' || res.status === 501) {
           regState.phone = phone;
-          Alert.alert('Development OTP', 'Please enter 123456 to verify.', [{ text: 'OK', onPress: () => go('rotp') }]);
+          Alert.alert('Development OTP', 'Please enter ' + (data.dev_otp || '123456') + ' to verify.', [{ text: 'OK', onPress: () => go('rotp') }]);
         } else {
           Alert.alert('Could Not Send Code', data.error || 'Please check your phone number.');
         }
@@ -344,7 +344,7 @@ export function RegAadhaar() {
         regState.aadhaar = aad;
         regState.email = email;
         regState.password = pw;
-        Alert.alert('Development OTP', 'Please enter 123456 to verify Aadhaar.', [{ text: 'OK', onPress: () => go('raotp') }]);
+        Alert.alert('Development OTP', 'Please enter ' + (data.dev_otp || '123456') + ' to verify Aadhaar.', [{ text: 'OK', onPress: () => go('raotp') }]);
       } else {
         Alert.alert('Aadhaar Failed', data.error || 'Could not verify Aadhaar number.');
       }
