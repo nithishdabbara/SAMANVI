@@ -5,6 +5,8 @@ import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as SecureStore from 'expo-secure-store';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { Logo } from '../components/Logo';
 import { FadeUp } from '../components/ui';
 /* ───────────── 01 Splash & Welcome combined ───────────── */
@@ -37,8 +39,35 @@ export default function WelcomeScreen() {
       Animated.timing(flt, { toValue: 0, duration: 1700, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
     ])).start();
 
-    // Hide splash after 2.8 seconds
-    const id = setTimeout(() => setShowSplash(false), 2800);
+    // Check auth and hide splash
+    const initApp = async () => {
+      try {
+        const token = await SecureStore.getItemAsync('userToken');
+        if (token) {
+          const hasHardware = await LocalAuthentication.hasHardwareAsync();
+          const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+          
+          if (hasHardware && isEnrolled) {
+            const authResult = await LocalAuthentication.authenticateAsync({
+              promptMessage: 'Unlock Samanvi',
+              fallbackLabel: 'Use Passcode'
+            });
+            if (authResult.success) {
+              router.replace('/(tabs)');
+              return;
+            }
+          } else {
+            router.replace('/(tabs)');
+            return;
+          }
+        }
+      } catch (e) {
+        console.log('Auth check error:', e);
+      }
+      setShowSplash(false);
+    };
+
+    const id = setTimeout(initApp, 2800);
     return () => clearTimeout(id);
   }, []);
 
