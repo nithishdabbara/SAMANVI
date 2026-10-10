@@ -1355,7 +1355,8 @@ def send_chat_message(current_user_id, recipient_id):
         if cur.fetchone():
             return jsonify({"error": "Cannot send message due to block settings."}), 403
         
-        cur.execute("INSERT INTO messages (sender_id, receiver_id, message) VALUES (%s, %s, %s) RETURNING id, created_at", (current_user_id, target_id, text))
+        enc_text = encrypt_message(text)
+        cur.execute("INSERT INTO messages (sender_id, receiver_id, message) VALUES (%s, %s, %s) RETURNING id, created_at", (current_user_id, target_id, enc_text))
         new_msg = cur.fetchone()
         
         # Get sender name for safe privacy notification teaser
