@@ -1391,6 +1391,66 @@ def send_chat_message(current_user_id, recipient_id):
         cur.close()
         conn.close()
 
+@app.route('/api/notifications', methods=['GET'])
+@token_required
+def get_notifications(current_user_id):
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Service unavailable"}), 503
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT id, title, message, type as notification_type, is_read, data, created_at
+            FROM notifications
+            WHERE user_id = %s
+            ORDER BY created_at DESC
+            LIMIT 50
+        """, (current_user_id,))
+        notifs = cur.fetchall()
+        for n in notifs:
+            n['id'] = str(n['id'])
+            # Parse data JSON for route mapping
+            if n.get('data'):
+                if isinstance(n['data'], str):
+                    try:
+                        import json
+                        n['data'] = json.loads(n['data'])
+                    except:
+                        pass
+                
+                # Map to routes for frontend
+                d = n['data']
+                if n['notification_type'] == 'chat_message':
+                    n['data_route'] = f"/chat/{d.get('sender_id', '')}"
+                elif n['notification_type'] == 'offer':
+                    n['data_route'] = '/offers'
+                elif n['notification_type'] == 'arrival_verified':
+                    n['data_route'] = f"/chat/{d.get('helper_id', '')}"
+                
+            n['type'] = n['notification_type']
+            n['time'] = n['created_at'].isoformat() if n['created_at'] else ''
+            
+        return jsonify({"notifications": notifs}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+@app.route('/api/notifications/<uuid:notif_id>/read', methods=['PUT'])
+@token_required
+def mark_notification_read(current_user_id, notif_id):
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("UPDATE notifications SET is_read = TRUE WHERE id = %s AND user_id = %s", (str(notif_id), current_user_id))
+        conn.commit()
+        return jsonify({"success": True}), 200
+    finally:
+        cur.close()
+        conn.close()
+
+
 @app.route('/api/helpers', methods=['GET'])
 def get_helpers():
     """Fetch trusted nearby helpers for the Helpers tab."""
