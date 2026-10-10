@@ -1452,7 +1452,8 @@ def mark_notification_read(current_user_id, notif_id):
 
 
 @app.route('/api/helpers', methods=['GET'])
-def get_helpers():
+@token_required
+def get_helpers(current_user_id):
     """Fetch trusted nearby helpers for the Helpers tab."""
     conn = get_db_connection()
     if not conn:
@@ -1460,22 +1461,41 @@ def get_helpers():
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         sort_by = request.args.get('sort', default='top')
-        order_clause = "ORDER BY u.trust_score DESC" if sort_by == 'top' else "ORDER BY u.created_at DESC"
+        lat = request.args.get('lat', type=float)
+        lng = request.args.get('lng', type=float)
+        radius = request.args.get('radius', default=50.0, type=float)
+
+        if lat is None or lng is None:
+            # Fallback to user's home location if not provided
+            cur.execute("SELECT home_lat, home_lon FROM users WHERE id = %s", (current_user_id,))
+            u_loc = cur.fetchone()
+            if u_loc and u_loc['home_lat'] is not None and u_loc['home_lon'] is not None:
+                lat = float(u_loc['home_lat'])
+                lng = float(u_loc['home_lon'])
+            else:
+                return jsonify({"error": "Location required"}), 400
+
+        # Haversine distance formula (km)
+        dist_sql = f"(6371 * acos(least(1.0, greatest(-1.0, cos(radians({lat})) * cos(radians(u.home_lat)) * cos(radians(u.home_lon) - radians({lng})) + sin(radians({lat})) * sin(radians(u.home_lat))))))"
+
+        order_clause = "ORDER BY u.trust_score DESC NULLS LAST" if sort_by == 'top' else "ORDER BY u.created_at DESC"
 
         cur.execute(f"""
             SELECT u.id, u.name, COALESCE(u.nickname, u.name) as nickname, u.role, u.trust_score, 
                    u.availability_status, u.avatar_url,
                    COALESCE(loc.name, 'Local Neighborhood') as locality_name,
                    (COALESCE(u.is_verified, FALSE) OR COALESCE(u.aadhaar_verified, FALSE)) as is_verified,
-                   ARRAY_AGG(s.skill_name) FILTER (WHERE s.skill_name IS NOT NULL) as skills
+                   ARRAY_AGG(s.skill_name) FILTER (WHERE s.skill_name IS NOT NULL) as skills,
+                   {dist_sql} as distance
             FROM users u
             LEFT JOIN localities loc ON u.locality_id = loc.id
             LEFT JOIN user_skills s ON u.id = s.user_id
-            WHERE u.is_active = TRUE
+            WHERE u.is_active = TRUE AND u.id != %s AND {dist_sql} <= %s
             GROUP BY u.id, loc.name
             {order_clause}
             LIMIT 50
-        """)
+        """, (current_user_id, radius))
+        
         rows = cur.fetchall()
         helpers_list = []
         for r in rows:
@@ -1484,12 +1504,13 @@ def get_helpers():
                 "name": r['nickname'] or r['name'],
                 "full_name": r['name'],
                 "role": r['role'],
-                "trust_score": float(r['trust_score']) if r['trust_score'] else 50.0,
+                "trust_score": float(r['trust_score']) if r['trust_score'] is not None else 0.0,
                 "availability_status": r['availability_status'] or 'available',
                 "avatar_url": r['avatar_url'],
                 "address": r['locality_name'] or 'Local Neighborhood',
                 "is_verified": bool(r['is_verified']),
-                "skills": [s for s in (r['skills'] or []) if s] or ["Community Support", "General Aid"]
+                "skills": [s for s in (r['skills'] or []) if s] or ["Community Support", "General Aid"],
+                "distance": float(r['distance']) if r['distance'] is not None else None
             })
         return jsonify({"helpers": helpers_list}), 200
     except Exception as e:

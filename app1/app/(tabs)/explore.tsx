@@ -48,12 +48,12 @@ export default function ExploreMapScreen() {
         setProblems(data.problems);
       }
       
-      const usersRes = await fetch(`${API_BASE_URL}/users/nearby?lat=${lat}&lng=${lng}`, {
+      const usersRes = await fetch(`${API_BASE_URL}/helpers?lat=${lat}&lng=${lng}&radius=30`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const usersData = await usersRes.json();
       if (usersRes.ok) {
-        setNeighbors(usersData.users);
+        setNeighbors(usersData.helpers || []);
       }
     } catch (e) {
       console.log('Error fetching map data:', e);
