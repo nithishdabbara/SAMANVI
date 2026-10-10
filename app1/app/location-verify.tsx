@@ -67,9 +67,6 @@ export default function LocationVerifyScreen() {
     try {
       const locString = detectedLocation || 'Your Local Area';
       await SecureStore.setItemAsync('userLocation', locString);
-      // Seed coordinates for Alkapuri, Vadodara
-      await SecureStore.setItemAsync('userLat', '22.3106');
-      await SecureStore.setItemAsync('userLng', '73.1812');
       
       Alert.alert("Success", `Location set to ${locString}. Welcome to Samanvi!`);
       router.replace('/(tabs)');
@@ -86,21 +83,8 @@ export default function LocationVerifyScreen() {
     }
     try {
       await SecureStore.setItemAsync('userLocation', manualLocality.trim());
-      // Seed coordinates based on manual input
-      if (manualLocality.toLowerCase().includes('hyderabad')) {
-        await SecureStore.setItemAsync('userLat', '17.4860');
-        await SecureStore.setItemAsync('userLng', '78.3916');
-      } else if (manualLocality.toLowerCase().includes('sayajigunj')) {
-        await SecureStore.setItemAsync('userLat', '22.3072');
-        await SecureStore.setItemAsync('userLng', '73.1812');
-      } else if (manualLocality.toLowerCase().includes('akota')) {
-        await SecureStore.setItemAsync('userLat', '22.2986');
-        await SecureStore.setItemAsync('userLng', '73.1666');
-      } else {
-        // Default to Alkapuri, Vadodara coordinates
-        await SecureStore.setItemAsync('userLat', '22.3106');
-        await SecureStore.setItemAsync('userLng', '73.1812');
-      }
+      await SecureStore.setItemAsync('userLocation', manualLocality.trim());
+
       
       Alert.alert("Success", `Locality set to: ${manualLocality.trim()}`);
       router.replace('/(tabs)');
